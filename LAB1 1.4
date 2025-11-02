@@ -1,0 +1,29 @@
+/*
+  Exercise 1.4 – Bare-metal bitwise LED toggle
+  Board: Arduino MKR WiFi 1010 (SAMD21)
+*/
+
+#include "sam.h"   // Gives access to SAMD21 hardware registers
+
+#define LED_PIN_PA20  20   // D6 → PA20 on MKR1010
+#define LED_PIN_PB10  10   // D4 → PB10 on MKR1010  (used for the task)
+
+void setup() {
+  // --- Enable the APB clock for the PORT module ---
+  PM->APBBMASK.reg |= PM_APBBMASK_PORT;
+
+  // --- Configure LED_PIN_PB10 (D4) as OUTPUT ---
+  // Group[0] = Port A (PA00–PA31)
+  // Group[1] = Port B (PB00–PB31)
+  PORT->Group[1].DIRSET.reg = (1 << LED_PIN_PB10);
+}
+
+void loop() {
+  // --- Turn LED ON (set bit high) ---
+  PORT->Group[1].OUTSET.reg = (1 << LED_PIN_PB10);
+  delay(1000);  // wait 1 second
+
+  // --- Turn LED OFF (clear bit) ---
+  PORT->Group[1].OUTCLR.reg = (1 << LED_PIN_PB10);
+  delay(1000);  // wait 1 second
+}
