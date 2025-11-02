@@ -1,0 +1,12 @@
+// Exercise 1: External Interrupt INT0 (Bare Metal)
+// Toggle LED on falling edge using registers
+
+#define F_CPU 16000000UL
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+
+ISR(INT0_vect) {
+    // Interrupt Service Routine for INT0
+    PORTB ^= (1 << PORTB5);  // Toggle LED (PB5 = Arduino pin 13)
+}
