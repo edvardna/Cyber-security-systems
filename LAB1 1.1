@@ -1,0 +1,38 @@
+// Exercise 1.1 - Digital & Analog I/O Basics
+// Board: Arduino MKR WiFi 1010 (SAMD21 Cortex-M0+)
+
+// === Pin setup ===
+const int ledPin = 6;   // External LED connected to D6 (through 220Ω resistor)
+// const int ledPin = LED_BUILTIN;  // ← Uncomment this line if you prefer to use the onboard LED instead
+const int potPin = A1;  // Middle (wiper) pin of potentiometer
+
+void setup() {
+  pinMode(ledPin, OUTPUT);     // Configure LED pin as OUTPUT
+  Serial.begin(9600);          // Start serial communication
+  while (!Serial);             // Wait for Serial Monitor to open (important on MKR boards)
+  Serial.println("Exercise 1.1 started...");
+
+  analogReadResolution(12);    // ✅ Enable 12-bit ADC resolution (0–4095)
+}
+
+void loop() {
+  // --- 1. Blink LED every 0.5 seconds ---
+  digitalWrite(ledPin, HIGH);  // LED ON
+  delay(500);
+  digitalWrite(ledPin, LOW);   // LED OFF
+  delay(500);
+
+  // --- 2. Read analog value from potentiometer ---
+  int rawValue = analogRead(potPin);             // 12-bit ADC → 0–4095
+  float voltage = rawValue * (3.3 / 4095.0);     // Convert to volts (0–3.3 V)
+
+  // --- 3. Print results to Serial Monitor ---
+  Serial.print("Analog value: ");
+  Serial.print(rawValue);
+  Serial.print("  |  Voltage: ");
+  Serial.print(voltage, 3);                      // Print 3 decimal places
+  Serial.println(" V");
+
+  // --- 4. Delay before next reading ---
+  delay(1000);  // Read once per second
+}
