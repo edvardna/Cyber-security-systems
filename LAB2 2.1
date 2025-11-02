@@ -1,0 +1,30 @@
+// Exercise 2: Pin Change Interrupt on Pin 8
+
+const int buttonPin = 8;   // PB0 → PCINT0
+const int ledPin = 13;     // PB5 → onboard LED
+
+volatile bool ledState = false;
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);  // enable pull-up
+
+  // Enable pin change interrupt for pin 8 (PCINT0)
+  PCICR |= (1 << PCIE0);    // Enable pin change interrupt for PORTB
+  PCMSK0 |= (1 << PCINT0);  // Enable PCINT0 (pin 8)
+
+  sei(); // Enable global interrupts
+}
+
+void loop() {
+  // main loop does nothing
+}
+
+// ISR for Pin Change Interrupt Request 0
+ISR(PCINT0_vect) {
+  // Check if the pin went LOW
+  if (digitalRead(buttonPin) == LOW) {
+    ledState = !ledState;
+    digitalWrite(ledPin, ledState);
+  }
+}
