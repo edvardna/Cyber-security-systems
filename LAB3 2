@@ -1,0 +1,33 @@
+/*
+ * Exercise 2 – Normal Mode (no sleep)
+ * MCU: ATmega328P  (Arduino Uno)
+ * Function:
+ *   - LED ON for 0.1 s
+ *   - LED OFF for 0.9 s
+ *   - Repeats continuously
+ * Used for comparison with sleep-mode version in Exercise 1
+ */
+
+#include <avr/io.h>
+#include <util/delay.h>
+
+#define LED_PIN PB5   // Arduino Uno onboard LED (Digital 13)
+
+int main(void)
+{
+    // --- Configure LED pin as output ---
+    DDRB |= (1 << LED_PIN);     // Set PB5 as output
+
+    while (1)
+    {
+        // --- LED ON ---
+        PORTB |= (1 << LED_PIN);
+        _delay_ms(100);         // LED ON for 0.1 s
+
+        // --- LED OFF ---
+        PORTB &= ~(1 << LED_PIN);
+        _delay_ms(900);         // LED OFF for 0.9 s
+    }
+
+    return 0;  // never reached
+}
