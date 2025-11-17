@@ -1,0 +1,70 @@
+int potPin = A0; // Potentiometer middle pin → A0
+
+
+
+
+void setup() {
+
+Serial.begin(9600); // Start Serial Monitor
+
+
+
+
+DDRB |= (1 << PB1); // Pin 9 output
+
+
+
+
+// Timer1 PWM setup on pin 9
+
+TCCR1A = (1 << COM1A1) | (1 << WGM11);
+
+TCCR1B = (1 << WGM12) | (1 << WGM13) | (1
+<< CS11);
+
+ICR1 = 255;
+
+OCR1A = 0;
+
+
+
+
+pinMode(potPin, INPUT);
+
+}
+
+
+
+
+void loop() {
+
+ 
+
+int potValue = analogRead(potPin); // 0–1023
+
+int pwmValue = map(potValue, 0, 1023, 0, 255);
+
+
+
+
+// Print both values to Serial Monitor
+
+Serial.print("Potentiometer: ");
+
+Serial.print(potValue);
+
+Serial.print(" PWM: ");
+
+Serial.println(pwmValue);
+
+
+
+
+OCR1A = pwmValue; // Set fan speed
+
+
+
+
+delay(200); // Update 5 times per second
+
+}
