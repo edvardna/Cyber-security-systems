@@ -1,0 +1,25 @@
+// ----------------------------------------------------------
+// Problem 4 - Optocoupler Fan Control
+// Fan ON for 3 seconds, OFF for 10 seconds.
+// Arduino pin 9 controls optocoupler input LED.
+// ----------------------------------------------------------
+
+void setup() {
+  // Pin 9 (PB1) as output
+  DDRB |= (1 << PB1);
+}
+
+void loop() {
+
+  // ----------------------
+  // FAN ON (activate optocoupler)
+  // ----------------------
+  PORTB |= (1 << PB1);   // Pin 9 HIGH
+  delay(3000);           // 3 seconds ON
+
+  // ----------------------
+  // FAN OFF (optocoupler off)
+  // ----------------------
+  PORTB &= ~(1 << PB1);  // Pin 9 LOW
+  delay(10000);          // 10 seconds OFF
+}
