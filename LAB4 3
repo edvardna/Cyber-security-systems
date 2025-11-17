@@ -1,0 +1,80 @@
+// ----------------------------------------------------------
+
+// Problem 3 - MOSFET (IRFZ44N) Fan Control
+
+// Fan ON for 6 seconds, OFF for 10 seconds.
+
+// Using Timer1 PWM on Pin 9 (OC1A).
+
+// ----------------------------------------------------------
+
+
+
+
+void setup() {
+
+
+
+
+// Pin 9 (PB1) output
+
+DDRB |= (1 << PB1);
+
+
+
+
+// -------- Timer1 Setup for PWM on pin 9 --------
+
+// Fast PWM, TOP = ICR1, non-inverting mode
+
+// Prescaler = 8 → stable PWM for the fan
+
+
+
+
+TCCR1A = (1 << COM1A1) | (1 << WGM11);
+
+TCCR1B = (1 << WGM12) | (1 << WGM13) | (1
+<< CS11);
+
+
+
+
+ICR1 = 255; // 8-bit PWM range (0–255)
+
+OCR1A = 0; // Start with fan OFF
+
+}
+
+
+
+
+void loop() {
+
+
+
+
+// ------------------------
+
+// FAN ON (full power)
+
+// ------------------------
+
+OCR1A = 255; // 100% PWM
+
+delay(6000); // ON for 6 seconds
+
+
+
+
+// ------------------------
+
+// FAN OFF
+
+// ------------------------
+
+OCR1A = 0; // Fan off
+
+delay(10000); // OFF for 10 seconds
+
+}
