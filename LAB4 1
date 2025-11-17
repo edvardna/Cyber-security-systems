@@ -1,0 +1,29 @@
+void setup() {
+
+// Arduino pin 9 = PB1 → set as output
+
+DDRB |= (1 << PB1);
+
+}
+
+
+
+
+void loop() {
+
+// Turn LED ON
+
+PORTB |= (1 << PB1);
+
+delay(3000); // 3 seconds
+
+
+
+
+// Turn LED OFF
+
+PORTB &= ~(1 << PB1);
+
+delay(1000); // 1 second
+
+}
