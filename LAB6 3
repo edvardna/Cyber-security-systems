@@ -1,0 +1,182 @@
+/*
+  Problem 3 – FAN speed control using MPU9250
+  Bare-metal I2C + PWM + Serial Debugging + Filtering
+  ATmega328P (Arduino Uno)
+*/
+
+#include <avr/io.h>
+#include <util/delay.h>
+
+// MPU9250 Constants
+#define MPU9250_ADDR 0x68
+#define PWR_MGMT_1   0x6B
+#define GYRO_ZOUT_H  0x47
+
+//-----------------------------------------------------
+// I2C (TWI) bare-metal implementation
+//-----------------------------------------------------
+void I2C_init() {
+    TWSR = 0x00;      // Prescaler = 1
+    TWBR = 72;        // 100 kHz SCL
+}
+
+void I2C_start() {
+    TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN);
+    while (!(TWCR & (1<<TWINT)));
+}
+
+void I2C_write(uint8_t data) {
+    TWDR = data;
+    TWCR = (1<<TWINT)|(1<<TWEN);
+    while (!(TWCR & (1<<TWINT)));
+}
+
+uint8_t I2C_readACK() {
+    TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWEA);
+    while (!(TWCR & (1<<TWINT)));
+    return TWDR;
+}
+
+uint8_t I2C_readNACK() {
+    TWCR = (1<<TWINT)|(1<<TWEN);
+    while (!(TWCR & (1<<TWINT)));
+    return TWDR;
+}
+
+void I2C_stop() {
+    TWCR = (1<<TWINT)|(1<<TWSTO)|(1<<TWEN);
+}
+
+//-----------------------------------------------------
+// MPU9250 Functions
+//-----------------------------------------------------
+void MPU9250_init() {
+    I2C_start();
+    I2C_write(MPU9250_ADDR << 1);
+    I2C_write(PWR_MGMT_1);
+    I2C_write(0x00);     // Wake from sleep
+    I2C_stop();
+}
+
+int16_t MPU9250_readGyroZ() {
+    I2C_start();
+    I2C_write(MPU9250_ADDR << 1);
+    I2C_write(GYRO_ZOUT_H);
+
+    I2C_start();
+    I2C_write((MPU9250_ADDR << 1) | 1);
+
+    uint8_t high = I2C_readACK();
+    uint8_t low  = I2C_readNACK();
+
+    I2C_stop();
+
+    return (high << 8) | low;
+}
+
+//-----------------------------------------------------
+// Moving Average Filter (10 samples)
+//-----------------------------------------------------
+#define FILTER_SIZE 10
+float filterBuffer[FILTER_SIZE];
+uint8_t filterIndex = 0;
+
+float smooth(float newValue) {
+    filterBuffer[filterIndex] = newValue;
+    filterIndex = (filterIndex + 1) % FILTER_SIZE;
+
+    float total = 0;
+    for (uint8_t i = 0; i < FILTER_SIZE; i++)
+        total += filterBuffer[i];
+
+    return total / FILTER_SIZE;
+}
+
+//-----------------------------------------------------
+// FAN PWM on pin 3 (OC2B)
+//-----------------------------------------------------
+void FAN_initPWM() {
+    DDRD |= (1 << PD3);        // Pin 3 output
+    TCCR2A = (1<<COM2B1) | (1<<WGM21) | (1<<WGM20);  // Fast PWM
+    TCCR2B = (1<<CS22);                                // Prescaler = 64
+}
+
+void FAN_setSpeed(uint8_t duty) {
+    OCR2B = duty;             // 0–255
+}
+
+//-----------------------------------------------------
+// UART Serial Print (Bare-Metal) at 57600 baud
+//-----------------------------------------------------
+void UART_init() {
+    UBRR0H = 0;
+    UBRR0L = 16;  // 57600 baud
+    UCSR0B = (1<<TXEN0);
+    UCSR0C = (1<<UCSZ01)|(1<<UCSZ00);
+}
+
+void UART_print(const char* str) {
+    while (*str) {
+        while (!(UCSR0A & (1<<UDRE0)));
+        UDR0 = *str++;
+    }
+}
+
+//-----------------------------------------------------
+// MAIN PROGRAM
+//-----------------------------------------------------
+int main() {
+    I2C_init();
+    MPU9250_init();
+    FAN_initPWM();
+    UART_init();
+
+    UART_print("MPU9250 Fan Controller Started...\r\n");
+
+    while (1) {
+        // Raw gyro reading
+        int16_t rawZ = MPU9250_readGyroZ();
+
+        // Convert to deg/s (FS_SEL = 0 → 131 LSB/deg/s)
+        float degPerSec = rawZ / 131.0;
+
+        // Apply 10-sample smoothing filter
+        degPerSec = smooth(degPerSec);
+
+        // Deadband (eliminate tiny noise)
+        if (degPerSec > -5 && degPerSec < 5)
+            degPerSec = 0;
+
+        // --- Hysteresis & Fan State ---
+        const char* state;
+        uint8_t pwm;
+
+        if (degPerSec < 25) {
+            pwm = 0;       state = "OFF";
+        }
+        else if (degPerSec < 90) {
+            pwm = 80;      state = "LOW";
+        }
+        else if (degPerSec < 180) {
+            pwm = 170;     state = "MEDIUM";
+        }
+        else {
+            pwm = 255;     state = "HIGH";
+        }
+
+        FAN_setSpeed(pwm);
+
+        // --- Convert float to string (fix float printing!) ---
+        char fbuf[16];
+        dtostrf(degPerSec, 6, 2, fbuf);   // width 6, 2 decimals
+
+        // --- Serial Output ---
+        char buffer[100];
+        snprintf(buffer, sizeof(buffer),
+                 "RawZ: %d  |  Smoothed deg/s: %s  |  FAN: %s\r\n",
+                 rawZ, fbuf, state);
+        UART_print(buffer);
+
+        _delay_ms(150);
+    }
+}
