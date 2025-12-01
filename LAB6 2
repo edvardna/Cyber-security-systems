@@ -1,0 +1,61 @@
+// Bare-metal SPI Master for ATmega328P / Arduino Uno
+// SPI Mode 3 (CPOL=1, CPHA=1), MSB First, Fosc/16
+// Added Serial Monitor debugging for lab analysis
+
+void SPI_MasterInit() {
+  // --- Set MOSI (PB3), SCK (PB5), SS (PB2) as OUTPUT ---
+  DDRB |= (1 << PB3) | (1 << PB5) | (1 << PB2);
+
+  // SS HIGH (inactive)
+  PORTB |= (1 << PB2);
+
+  // --- Configure SPI Control Register (SPCR) ---
+  // SPE = Enable SPI
+  // MSTR = Master mode
+  // SPR0 = 1 → Fosc/16
+  // CPOL = 1 → SCK idle HIGH
+  // CPHA = 1 → Sample on trailing edge
+  // DORD = 0 → MSB first
+  SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0) | (1 << CPOL) | (1 << CPHA);
+}
+
+uint8_t SPI_MasterTransmit(uint8_t dataOut) {
+  // Select slave → SS LOW
+  PORTB &= ~(1 << PB2);
+
+  // Load outgoing data into SPI buffer
+  SPDR = dataOut;
+
+  // Wait for transmission complete (SPIF flag = 1)
+  while (!(SPSR & (1 << SPIF)));
+
+  // Read received byte (slave may respond)
+  uint8_t dataIn = SPDR;
+
+  // Deselect slave → SS HIGH
+  PORTB |= (1 << PB2);
+
+  return dataIn;   // return what the slave sent (useful for debugging)
+}
+
+void setup() {
+  Serial.begin(115200);     // High speed logging
+  delay(200);
+  Serial.println("=== Bare-Metal SPI Master (Mode 3, Fosc/16) ===");
+
+  SPI_MasterInit();
+  Serial.println("SPI Initialized...");
+}
+
+void loop() {
+  uint8_t sendByte = 0xA5;   // Example pattern
+  Serial.print("Sending: 0x");
+  Serial.print(sendByte, HEX);
+
+  uint8_t received = SPI_MasterTransmit(sendByte);
+
+  Serial.print("   | Received: 0x");
+  Serial.println(received, HEX);
+
+  delay(500);
+}
